@@ -54,39 +54,62 @@ const DEFAULT_ITEMS: CardItem[] = [
 ];
 
 
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.warn(`[safeStorage] Error reading key "${key}":`, e);
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn(`[safeStorage] Error writing key "${key}":`, e);
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn(`[safeStorage] Error removing key "${key}":`, e);
+    }
+  },
+  clear: (): void => {
+    try {
+      localStorage.clear();
+    } catch (e) {
+      console.warn('[safeStorage] Error clearing storage:', e);
+    }
+  }
+};
+
 export default function App() {
   // Persistence states
   const [items, setItems] = useState<CardItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('pessoal_cards_v1');
-      if (saved && saved !== 'undefined') {
+    const saved = safeStorage.getItem('pessoal_cards_v1');
+    if (saved && saved !== 'undefined') {
+      try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           return parsed;
         }
+      } catch (e) {
+        console.warn("FALHA AO PARSEAR CARDITEMS 'pessoal_cards_v1':", e);
       }
-    } catch (e) {
-      console.warn("FALHA AO LER LOCALSTORAGE 'pessoal_cards_v1':", e);
     }
     return DEFAULT_ITEMS;
   });
 
   // Master password loaded from Firestore
   const [dbPassword, setDbPassword] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('pessoal_admin_password');
-    } catch (_) {
-      return null;
-    }
+    return safeStorage.getItem('pessoal_admin_password');
   });
 
   const [isPasswordSet, setIsPasswordSet] = useState(() => {
-    try {
-      return !!localStorage.getItem('pessoal_admin_password');
-    } catch (e) {
-      console.warn("FALHA AO LER 'pessoal_admin_password':", e);
-      return false;
-    }
+    return !!safeStorage.getItem('pessoal_admin_password');
   });
 
   // Admin access unlocked state (default locked on load for privacy)
@@ -103,20 +126,15 @@ export default function App() {
 
   // Dark/Light Theme selection
   const [darkMode, setDarkMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem('theme');
-      return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    } catch (e) {
-      console.warn("FALHA AO LER 'theme':", e);
-      return false;
-    }
+    const saved = safeStorage.getItem('theme');
+    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
 
   const [syncError, setSyncError] = useState<string | null>(null);
 
   // Effect to serialize cards list
   useEffect(() => {
-    localStorage.setItem('pessoal_cards_v1', JSON.stringify(items));
+    safeStorage.setItem('pessoal_cards_v1', JSON.stringify(items));
   }, [items]);
 
   // Load master password from Firestore (or fallback to localstorage)
@@ -128,11 +146,7 @@ export default function App() {
         if (data && typeof data.password === 'string') {
           setDbPassword(data.password);
           setIsPasswordSet(true);
-          try {
-            localStorage.setItem('pessoal_admin_password', data.password);
-          } catch (err) {
-            console.warn("Local storage write failed:", err);
-          }
+          safeStorage.setItem('pessoal_admin_password', data.password);
         }
       }
     }, (error) => {
@@ -171,16 +185,16 @@ export default function App() {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      safeStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      safeStorage.setItem('theme', 'light');
     }
   }, [darkMode]);
 
   // Auth unlock controllers
   const handleUnlock = (password: string): boolean => {
-    const savedPassword = dbPassword || localStorage.getItem('pessoal_admin_password');
+    const savedPassword = dbPassword || safeStorage.getItem('pessoal_admin_password');
     if (savedPassword === password) {
       setIsUnlocked(true);
       return true;
@@ -189,11 +203,7 @@ export default function App() {
   };
 
   const handleSetPassword = async (password: string) => {
-    try {
-      localStorage.setItem('pessoal_admin_password', password);
-    } catch (err) {
-      console.warn("Local storage write failed:", err);
-    }
+    safeStorage.setItem('pessoal_admin_password', password);
     setIsPasswordSet(true);
     setIsUnlocked(true);
     setDbPassword(password);
