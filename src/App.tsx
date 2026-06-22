@@ -20,7 +20,6 @@ import {
 import { CardItem, ItemType } from './types';
 import PasswordLock from './components/PasswordLock';
 import StatsPanel from './components/StatsPanel';
-import AiSearchPanel from './components/AiSearchPanel';
 import ItemForm from './components/ItemForm';
 import ItemCard from './components/ItemCard';
 import { db, CARDS_COLLECTION, CONFIG_COLLECTION, handleFirestoreError, OperationType } from './lib/firebase';
@@ -497,9 +496,6 @@ export default function App() {
 
         {/* Stats box metric visualizers */}
         <StatsPanel items={items} />
-
-        {/* Gemini powered text-grounded agent searches lookups */}
-        <AiSearchPanel isUnlocked={isUnlocked} onAddAiCard={handleAddAiCard} />
 
         {/* Controls Toolbar Area */}
         <section className="bg-white dark:bg-neutral-900 border border-neutral-150 dark:border-neutral-850 p-4 rounded-2xl mb-6 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-center transition-colors">

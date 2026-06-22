@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Sparkles, Loader2, Upload, FileText, Bell, Link2, Check, AlertCircle } from 'lucide-react';
+import { X, Upload, FileText, Bell, Link2, Check } from 'lucide-react';
 import { CardItem, ItemType } from '../types';
 
 interface ItemFormProps {
@@ -18,9 +18,7 @@ export default function ItemForm({ isOpen, onClose, onSave, initialItem, isUnloc
   const [date, setDate] = useState('');
   const [imageUrl, setImageUrl] = useState('');
 
-  // AI Imaging State
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
+  // Attachment Imaging State
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,7 +37,6 @@ export default function ItemForm({ isOpen, onClose, onSave, initialItem, isUnloc
       setDate('');
       setImageUrl('');
     }
-    setAiError(null);
   }, [initialItem, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -61,60 +58,19 @@ export default function ItemForm({ isOpen, onClose, onSave, initialItem, isUnloc
   // Convert File to Base64 String
   const processImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      setAiError('Por favor selecione uma imagem válida (PNG, JPEG, WEBP).');
+      alert('Por favor selecione uma imagem válida (PNG, JPEG, WEBP).');
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = async () => {
+    reader.onload = () => {
       const base64Data = reader.result as string;
-      setImageUrl(base64Data); // Show thumbnail
-      await analyzeImageWithAI(base64Data, file.type);
+      setImageUrl(base64Data); // Show thumbnail and attach it to item
     };
     reader.onerror = () => {
-      setAiError('Erro ao carregar o arquivo.');
+      alert('Erro ao carregar o arquivo.');
     };
     reader.readAsDataURL(file);
-  };
-
-  // Trigger Gemini API Analysis in our custom backend
-  const analyzeImageWithAI = async (base64Image: string, mimeType: string) => {
-    setIsAnalyzing(true);
-    setAiError(null);
-
-    try {
-      const response = await fetch('/api/gemini/analyze-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image: base64Image,
-          mimeType: mimeType,
-          userPrompt: 'Analise este conteúdo e extraia as informações essenciais estruturando para o usuário.',
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro inesperado ao analisar com IA.');
-      }
-
-      const result = await response.json();
-
-      // Pre-fill fields with AI's insights!
-      setTitle(result.title || '');
-      setContent(result.content || '');
-      if (result.type === 'nota' || result.type === 'lembrete' || result.type === 'link') {
-        setType(result.type);
-      }
-      if (result.date) {
-        setDate(result.date);
-      }
-    } catch (err: any) {
-      console.error(err);
-      setAiError(err.message || 'Falha ao analisar imagem. Certifique-se de que a Gemini Key está configurada.');
-    } finally {
-      setIsAnalyzing(false);
-    }
   };
 
   // Drag and Drop Handling
@@ -187,86 +143,65 @@ export default function ItemForm({ isOpen, onClose, onSave, initialItem, isUnloc
           </div>
 
           <div className="p-6 overflow-y-auto max-h-[80vh] space-y-6">
-            {/* AI Image Analyzer scanning section */}
-            {!initialItem && (
-              <div
-                className={`border-2 border-dashed rounded-xl p-4 transition-all duration-300 relative ${
-                  isDragActive
-                    ? 'border-emerald-500 bg-emerald-500/10'
-                    : 'border-neutral-200 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-950/20'
-                }`}
-                onDragEnter={handleDrag}
-                onDragOver={handleDrag}
-                onDragLeave={handleDrag}
-                onDrop={handleDrop}
-              >
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                  <div className="w-16 h-16 rounded-xl bg-emerald-100/50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-                    {isAnalyzing ? (
-                      <Loader2 className="w-7 h-7 animate-spin" />
-                    ) : (
-                      <Upload className="w-7 h-7" />
-                    )}
-                  </div>
+            {/* Local Image Attachment Area (completely client-side & static-friendly!) */}
+            <div
+              className={`border-2 border-dashed rounded-xl p-4 transition-all duration-300 relative ${
+                isDragActive
+                  ? 'border-emerald-500 bg-emerald-500/10'
+                  : 'border-neutral-200 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-950/20'
+              }`}
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+            >
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 flex items-center justify-center flex-shrink-0">
+                  <Upload className="w-7 h-7" />
+                </div>
 
-                  <div className="flex-1 text-center md:text-left">
-                    <h4 className="text-xs font-bold text-neutral-650 uppercase tracking-wider flex items-center justify-center md:justify-start gap-1.5 dark:text-emerald-400">
-                      <Sparkles className="w-3.5 h-3.5" /> Scanner Inteligente de Imagem por IA
-                    </h4>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                      Arraste ou selecione uma foto de documento, receita ou lixeira para extrair e classificar em nota automaticamente.
-                    </p>
-                    <div className="mt-2.5 flex flex-wrap gap-2 items-center justify-center md:justify-start">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="text-xs font-semibold px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-850 dark:hover:bg-neutral-800 rounded-lg text-neutral-700 dark:text-neutral-300 transition"
-                      >
-                        Selecionar Arquivo
-                      </button>
-                      <span className="text-[10px] text-neutral-450">Fração de segundo usando Gemini 3.1 Pro</span>
-                    </div>
-                  </div>
-
-                  {imageUrl && (
-                    <div className="relative w-16 h-16 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden flex-shrink-0">
-                      <img src={imageUrl} alt="Análise de prévia" className="w-full h-full object-cover referer-policy" referrerPolicy="no-referrer" />
+                <div className="flex-1 text-center md:text-left">
+                  <h4 className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider">
+                    Anexo de Imagem Local
+                  </h4>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                    Arraste ou clique abaixo para anexar uma imagem à sua nota de forma 100% offline.
+                  </p>
+                  <div className="mt-2.5 flex flex-wrap gap-2 items-center justify-center md:justify-start">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs font-semibold px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-850 dark:hover:bg-neutral-800 rounded-lg text-neutral-700 dark:text-neutral-300 transition"
+                    >
+                      Selecionar Imagem
+                    </button>
+                    {imageUrl && (
                       <button
                         type="button"
                         onClick={() => setImageUrl('')}
-                        className="absolute inset-0 bg-black/40 hover:bg-black/60 flex items-center justify-center transition text-white"
+                        className="text-xs font-semibold px-3 py-1.5 bg-red-50 text-red-650 hover:bg-red-100 rounded-lg transition"
                       >
-                        <X className="w-4 h-4" />
+                        Remover Anexo
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*"
-                  className="hidden"
-                />
-
-                {isAnalyzing && (
-                  <div className="absolute inset-0 bg-white/70 dark:bg-neutral-900/70 flex items-center justify-center rounded-xl">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg shadow-md text-xs font-semibold dark:bg-emerald-950 dark:text-emerald-300">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Analisando imagem com Gemini AI...</span>
-                    </div>
+                {imageUrl && (
+                  <div className="relative w-16 h-16 rounded-lg border border-neutral-250 dark:border-neutral-800 overflow-hidden flex-shrink-0">
+                    <img src={imageUrl} alt="Anexo" className="w-full h-full object-cover referer-policy" referrerPolicy="no-referrer" />
                   </div>
                 )}
               </div>
-            )}
 
-            {aiError && (
-              <div className="p-3 bg-red-100/60 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-xl text-xs font-medium text-red-600 dark:text-red-400 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{aiError}</span>
-              </div>
-            )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Type selection */}
