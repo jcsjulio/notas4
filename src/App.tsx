@@ -57,12 +57,27 @@ const DEFAULT_ITEMS: CardItem[] = [
 export default function App() {
   // Persistence states
   const [items, setItems] = useState<CardItem[]>(() => {
-    const saved = localStorage.getItem('pessoal_cards_v1');
-    return saved ? JSON.parse(saved) : DEFAULT_ITEMS;
+    try {
+      const saved = localStorage.getItem('pessoal_cards_v1');
+      if (saved && saved !== 'undefined') {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("FALHA AO LER LOCALSTORAGE 'pessoal_cards_v1':", e);
+    }
+    return DEFAULT_ITEMS;
   });
 
   const [isPasswordSet, setIsPasswordSet] = useState(() => {
-    return !!localStorage.getItem('pessoal_admin_password');
+    try {
+      return !!localStorage.getItem('pessoal_admin_password');
+    } catch (e) {
+      console.warn("FALHA AO LER 'pessoal_admin_password':", e);
+      return false;
+    }
   });
 
   // Admin access unlocked state (default locked on load for privacy)
@@ -79,8 +94,13 @@ export default function App() {
 
   // Dark/Light Theme selection
   const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    try {
+      const saved = localStorage.getItem('theme');
+      return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (e) {
+      console.warn("FALHA AO LER 'theme':", e);
+      return false;
+    }
   });
 
   const [syncError, setSyncError] = useState<string | null>(null);
