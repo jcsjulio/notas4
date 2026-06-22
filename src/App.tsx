@@ -347,7 +347,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-display font-bold text-lg sm:text-xl tracking-tight text-neutral-900 dark:text-white flex items-center gap-1.5">
-                Anotações Pessoais
+                Minhas notas
               </h1>
               <p className="text-[10px] text-neutral-450 tracking-wider uppercase font-semibold hidden sm:block">
                 Hospedado via GitHub Pages • Offline First
