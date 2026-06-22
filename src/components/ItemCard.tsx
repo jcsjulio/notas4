@@ -52,8 +52,13 @@ export default function ItemCard({
     e.stopPropagation();
 
     // If currently playing, we want to pause it
-    if (isCurrentlyPlaying && audioRef.current) {
-      audioRef.current.pause();
+    if (isCurrentlyPlaying) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
       setIsCurrentlyPlaying(false);
       return;
     }
@@ -64,49 +69,83 @@ export default function ItemCard({
       // Build synthesis content: Include title and body text
       const speechText = `Título: ${item.title}. Conteúdo: ${item.content}`;
 
-      const response = await fetch('/api/gemini/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: speechText,
-          voice: 'Zephyr' // Default model voice
-        }),
-      });
+      // Try server-side TTS first
+      try {
+        const response = await fetch('/api/gemini/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: speechText,
+            voice: 'Zephyr' // Default model voice
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Falha ao gerar o áudio do Gemini TTS.');
+        if (response.ok) {
+          const data = await response.json();
+          const base64Audio = data.audio;
+
+          if (base64Audio) {
+            // Decode base64 to binary data and play
+            const binaryString = window.atob(base64Audio);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const blob = new Blob([bytes.buffer], { type: 'audio/mp3' });
+            const audioUrl = URL.createObjectURL(blob);
+
+            // Create new audio instance
+            if (audioRef.current) {
+              audioRef.current.pause();
+            }
+            const audio = new Audio(audioUrl);
+            audioRef.current = audio;
+
+            audio.onended = () => {
+              setIsCurrentlyPlaying(false);
+              URL.revokeObjectURL(audioUrl);
+            };
+
+            audio.play();
+            setIsCurrentlyPlaying(true);
+            setTtsLoading(false);
+            return;
+          }
+        }
+      } catch (serverErr) {
+        console.warn('Servidor TTS indisponível, usando fallback nativo do navegador:', serverErr);
       }
 
-      const data = await response.json();
-      const base64Audio = data.audio;
+      // Fallback: Web Speech API SpeechSynthesis
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel(); // limit previous speaking
+        
+        const utterance = new SpeechSynthesisUtterance(speechText);
+        utterance.lang = 'pt-BR';
+        
+        // Find a Portuguese voice if available
+        const voices = window.speechSynthesis.getVoices();
+        const ptVoice = voices.find(v => v.lang.includes('pt-BR') || v.lang.startsWith('pt'));
+        if (ptVoice) {
+          utterance.voice = ptVoice;
+        }
 
-      // Decode base64 to binary data and play
-      const binaryString = window.atob(base64Audio);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+        utterance.onend = () => {
+          setIsCurrentlyPlaying(false);
+        };
+        utterance.onerror = () => {
+          setIsCurrentlyPlaying(false);
+        };
+
+        window.speechSynthesis.speak(utterance);
+        setIsCurrentlyPlaying(true);
+      } else {
+        throw new Error('TTS nativo não suportado neste navegador.');
       }
-      const blob = new Blob([bytes.buffer], { type: 'audio/mp3' });
-      const audioUrl = URL.createObjectURL(blob);
-
-      // Create new audio instance
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-
-      audio.onended = () => {
-        setIsCurrentlyPlaying(false);
-        URL.revokeObjectURL(audioUrl);
-      };
-
-      audio.play();
-      setIsCurrentlyPlaying(true);
     } catch (err) {
       console.error(err);
-      alert('Não foi possível narrar este item no momento. Verifique sua conexão ou chaves Gemini.');
+      alert('Não foi possível narrar este item no momento. Verifique se o navegador suporta síntese de voz.');
     } finally {
       setTtsLoading(false);
     }
