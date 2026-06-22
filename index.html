@@ -6,30 +6,52 @@
     <title>Notas</title>
     <script>
       window.addEventListener('error', function(e) {
-        var div = document.createElement('div');
-        div.style.position = 'fixed';
-        div.style.top = '0';
-        div.style.left = '0';
-        div.style.width = '100vw';
-        div.style.height = '100vh';
-        div.style.backgroundColor = '#1a1a1a';
-        div.style.color = '#ff6b6b';
-        div.style.padding = '30px';
-        div.style.fontFamily = 'monospace';
-        div.style.fontSize = '14px';
-        div.style.lineHeight = '1.5';
-        div.style.zIndex = '999999';
-        div.style.overflow = 'auto';
-        div.style.boxSizing = 'border-box';
-        div.innerHTML = '<h2 style="color: #ff4747; margin-top: 0;">⚠️ Erro de Execução Detectado</h2>' +
-          '<p><strong>Mensagem:</strong> ' + e.message + '</p>' +
-          '<p><strong>Arquivo:</strong> ' + e.filename + ' (linha ' + e.lineno + ', coluna ' + e.colno + ')</p>' +
-          '<p><strong>Stack-trace:</strong></p>' +
-          '<pre style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444; color: #eee; overflow-x: auto;">' + 
-          (e.error ? e.error.stack : 'Nenhum stack-trace disponível.') + '</pre>' +
-          '<p style="color: #888; font-size: 11px; margin-top: 20px;">Por favor, envie este erro para o assistente corrigir!</p>';
-        document.body.appendChild(div);
-      });
+        function showError() {
+          // If error is already shown, do not duplicate
+          if (document.getElementById('diagnostic-error-overlay')) return;
+
+          var div = document.createElement('div');
+          div.id = 'diagnostic-error-overlay';
+          div.style.position = 'fixed';
+          div.style.top = '0';
+          div.style.left = '0';
+          div.style.width = '100vw';
+          div.style.height = '100vh';
+          div.style.backgroundColor = '#1a1a1a';
+          div.style.color = '#ff6b6b';
+          div.style.padding = '30px';
+          div.style.fontFamily = 'monospace';
+          div.style.fontSize = '14px';
+          div.style.lineHeight = '1.5';
+          div.style.zIndex = '999999';
+          div.style.overflow = 'auto';
+          div.style.boxSizing = 'border-box';
+          
+          var isResource = e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK');
+          var title = isResource ? '⚠️ Erro ao Carregar Arquivo de Código (MIME/404)' : '⚠️ Erro de Execução Detectado';
+          var msg = isResource ? 'Houve um erro ao buscar o arquivo build do site. Detalhes: ' + (e.target.src || e.target.href) : e.message;
+          var stack = isResource ? 'Isso pode ocorrer por um cache antigo no navegador. Recomendação: limpe o cache de navegação (Ctrl+F5 ou Shift+F5) e verifique se o arquivo do script existe.' : (e.error ? e.error.stack : 'Nenhum stack-trace disponível.');
+
+          div.innerHTML = '<h2 style="color: #ff4747; margin-top: 0;">' + title + '</h2>' +
+            '<p><strong>Mensagem:</strong> ' + msg + '</p>' +
+            '<p><strong>Stack-trace / Sugestão:</strong></p>' +
+            '<pre style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444; color: #eee; overflow-x: auto; whitespace: pre-wrap;">' + 
+            stack + '</pre>' +
+            '<p style="color: #888; font-size: 11px; margin-top: 20px;">Por favor, envie este erro para o assistente corrigir!</p>';
+          
+          if (document.body) {
+            document.body.appendChild(div);
+          } else {
+            document.documentElement.appendChild(div);
+          }
+        }
+
+        if (document.body) {
+          showError();
+        } else {
+          window.addEventListener('DOMContentLoaded', showError);
+        }
+      }, true);
     </script>
   </head>
   <body>
