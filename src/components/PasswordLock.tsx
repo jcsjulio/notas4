@@ -226,8 +226,7 @@ export default function PasswordLock({
 
                   {!isPasswordSet && (
                     <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed text-center">
-                      * Esta senha é salva apenas no seu navegador usando <strong>localStorage</strong>. 
-                      Sem ela, qualquer visitante só poderá ler seus cards.
+                      * Esta senha é salva de forma segura na nuvem via <strong>Firebase Firestore</strong>, sincronizando entre todos os seus dispositivos.
                     </p>
                   )}
                 </form>

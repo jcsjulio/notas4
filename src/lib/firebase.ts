@@ -20,6 +20,7 @@ export const db = getFirestore(app);
 
 // Keep standard firestore paths
 export const CARDS_COLLECTION = 'cards';
+export const CONFIG_COLLECTION = 'config';
 
 export enum OperationType {
   CREATE = 'create',

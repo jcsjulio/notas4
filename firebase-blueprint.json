@@ -17,12 +17,25 @@
         "aiSummary": { "type": "string" }
       },
       "required": ["id", "type", "title", "content", "createdAt"]
+    },
+    "ConfigLock": {
+      "title": "ConfigLock",
+      "description": "Configuração da senha mestra de proteção",
+      "type": "object",
+      "properties": {
+        "password": { "type": "string" }
+      },
+      "required": ["password"]
     }
   },
   "firestore": {
     "/cards/{cardId}": {
       "schema": "CardItem",
       "description": "Coleção primária das anotações e lembretes compartilhados"
+    },
+    "/config/{configId}": {
+      "schema": "ConfigLock",
+      "description": "Configurações globais e de senha da aplicação"
     }
   }
 }

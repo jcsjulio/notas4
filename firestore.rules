@@ -20,6 +20,13 @@ service cloud.firestore {
         && data.createdAt is string;
     }
 
+    function isValidConfig(data) {
+      return data.keys().hasAll(['password'])
+        && data.password is string
+        && data.password.size() >= 4
+        && data.password.size() <= 64;
+    }
+
     // Rules for cards collection
     match /cards/{cardId} {
       // Allow read anonymously for easy viewing on GitHub Pages
@@ -31,6 +38,12 @@ service cloud.firestore {
       
       // Allow delete
       allow delete: if true;
+    }
+
+    // Rules for config collection
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isValidConfig(request.resource.data);
     }
   }
 }

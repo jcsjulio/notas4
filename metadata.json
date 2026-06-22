@@ -1,5 +1,5 @@
 {
-  "name": "Anotações e Lembretes Pessoais",
+  "name": "Notas",
   "description": "Um sistema pessoal, moderno e minimalista para anotações, lembretes e links salvos, com integrações inteligentes como análise de imagens, busca na web e conversão de texto para fala.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

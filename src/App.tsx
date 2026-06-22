@@ -23,7 +23,7 @@ import StatsPanel from './components/StatsPanel';
 import AiSearchPanel from './components/AiSearchPanel';
 import ItemForm from './components/ItemForm';
 import ItemCard from './components/ItemCard';
-import { db, CARDS_COLLECTION, handleFirestoreError, OperationType } from './lib/firebase';
+import { db, CARDS_COLLECTION, CONFIG_COLLECTION, handleFirestoreError, OperationType } from './lib/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 const DEFAULT_ITEMS: CardItem[] = [
@@ -71,6 +71,15 @@ export default function App() {
     return DEFAULT_ITEMS;
   });
 
+  // Master password loaded from Firestore
+  const [dbPassword, setDbPassword] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('pessoal_admin_password');
+    } catch (_) {
+      return null;
+    }
+  });
+
   const [isPasswordSet, setIsPasswordSet] = useState(() => {
     try {
       return !!localStorage.getItem('pessoal_admin_password');
@@ -110,6 +119,30 @@ export default function App() {
     localStorage.setItem('pessoal_cards_v1', JSON.stringify(items));
   }, [items]);
 
+  // Load master password from Firestore (or fallback to localstorage)
+  useEffect(() => {
+    const configDoc = doc(db, CONFIG_COLLECTION, 'lock');
+    const unsubscribe = onSnapshot(configDoc, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data && typeof data.password === 'string') {
+          setDbPassword(data.password);
+          setIsPasswordSet(true);
+          try {
+            localStorage.setItem('pessoal_admin_password', data.password);
+          } catch (err) {
+            console.warn("Local storage write failed:", err);
+          }
+        }
+      }
+    }, (error) => {
+      console.warn("Firestore config lock snapshot error:", error);
+      handleFirestoreError(error, OperationType.GET, `${CONFIG_COLLECTION}/lock`);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Load real-time items from Firestore
   useEffect(() => {
     const cardsCol = collection(db, CARDS_COLLECTION);
@@ -147,7 +180,7 @@ export default function App() {
 
   // Auth unlock controllers
   const handleUnlock = (password: string): boolean => {
-    const savedPassword = localStorage.getItem('pessoal_admin_password');
+    const savedPassword = dbPassword || localStorage.getItem('pessoal_admin_password');
     if (savedPassword === password) {
       setIsUnlocked(true);
       return true;
@@ -155,10 +188,25 @@ export default function App() {
     return false;
   };
 
-  const handleSetPassword = (password: string) => {
-    localStorage.setItem('pessoal_admin_password', password);
+  const handleSetPassword = async (password: string) => {
+    try {
+      localStorage.setItem('pessoal_admin_password', password);
+    } catch (err) {
+      console.warn("Local storage write failed:", err);
+    }
     setIsPasswordSet(true);
     setIsUnlocked(true);
+    setDbPassword(password);
+
+    // Sync password configuration to Firestore
+    try {
+      await setDoc(doc(db, CONFIG_COLLECTION, 'lock'), { password });
+      setSyncError(null);
+    } catch (error: any) {
+      console.warn("Firestore write error during set password:", error);
+      handleFirestoreError(error, OperationType.WRITE, `${CONFIG_COLLECTION}/lock`);
+      setSyncError(error.message || String(error));
+    }
   };
 
   const handleLock = () => {
@@ -347,7 +395,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-display font-bold text-lg sm:text-xl tracking-tight text-neutral-900 dark:text-white flex items-center gap-1.5">
-                Minhas notas
+                Notas
               </h1>
               <p className="text-[10px] text-neutral-450 tracking-wider uppercase font-semibold hidden sm:block">
                 Hospedado via GitHub Pages • Offline First

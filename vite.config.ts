@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(({ command }) => {
   return {
-    base: './',
+    base: '/notas4/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
