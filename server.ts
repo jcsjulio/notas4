@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Modality, Type } from '@google/genai';
 import dotenv from 'dotenv';
@@ -199,10 +200,12 @@ Instruções para os campos:
     });
     app.use(vite.middlewares);
   } else {
+    const docsPath = path.join(process.cwd(), 'docs');
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    const staticPath = fs.existsSync(docsPath) ? docsPath : distPath;
+    app.use(express.static(staticPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      res.sendFile(path.join(staticPath, 'index.html'));
     });
   }
 

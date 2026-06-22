@@ -3,14 +3,18 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
-export default defineConfig(() => {
+export default defineConfig(({ command }) => {
   return {
-    base: process.env.GITHUB_ACTIONS === 'true' ? '/notas4/' : './',
+    base: command === 'serve' ? '/' : (process.env.GITHUB_ACTIONS === 'true' ? '/notas4/' : './'),
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+    },
+    build: {
+      outDir: 'docs',
+      emptyOutDir: true,
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
