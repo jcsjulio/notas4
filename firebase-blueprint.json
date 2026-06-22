@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "CardItem": {
+      "title": "CardItem",
+      "description": "Uma nota, lembrete ou link salvo contendo metadados opcionais",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["nota", "lembrete", "link"] },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "imageUrl": { "type": "string" },
+        "aiGenerated": { "type": "boolean" },
+        "aiSummary": { "type": "string" }
+      },
+      "required": ["id", "type", "title", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/cards/{cardId}": {
+      "schema": "CardItem",
+      "description": "Coleção primária das anotações e lembretes compartilhados"
+    }
+  }
+}

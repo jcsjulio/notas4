@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Validation helper
+    function isValidCard(data) {
+      return data.keys().hasAll(['id', 'type', 'title', 'content', 'createdAt'])
+        && data.id is string
+        && data.type is string
+        && (data.type == 'nota' || data.type == 'lembrete' || data.type == 'link')
+        && data.title is string
+        && data.title.size() <= 200
+        && data.content is string
+        && data.content.size() <= 10000
+        && data.createdAt is string;
+    }
+
+    // Rules for cards collection
+    match /cards/{cardId} {
+      // Allow read anonymously for easy viewing on GitHub Pages
+      allow read: if true;
+      
+      // Allow any user to create/update if payload structure is safe
+      allow create: if isValidCard(request.resource.data);
+      allow update: if isValidCard(request.resource.data);
+      
+      // Allow delete
+      allow delete: if true;
+    }
+  }
+}
